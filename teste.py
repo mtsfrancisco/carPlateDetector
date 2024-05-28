@@ -1,6 +1,9 @@
 import cv2
 from matplotlib import pyplot as plt
 import numpy as np
+from ultralytics import YOLO
+
+car_model = YOLO(r"yolov8n.pt")
 
 # Carregar a imagem
 def projecao_vertical(image):  
@@ -21,15 +24,17 @@ def projecao_vertical(image):
     plt.plot(histogram)
     plt.show()
 
-    # Aplicar filtro de média 9x9 para normalização dos dados
-    #normalized_histogram = cv2.blur(histogram, (9, 9)) SUPOSTAMENTE FUNCIONA NO MAC
-    kernel_size = 9
-    kernel = np.ones(kernel_size) / kernel_size
-    normalized_histogram = np.convolve(histogram, kernel, mode='same')
 
+    # Aplicar filtro de média 9x9 para normalização dos dados
+    normalized_histogram = cv2.blur(histogram, (9, 9)) 
+    plt.plot(normalized_histogram)
+    plt.show()
 
     # Limiarização (thresholding) para identificar os picos
-    thresholded_histogram = np.where(normalized_histogram > 60, normalized_histogram, 0)
+    threshold_value = np.max(normalized_histogram) * 0.5
+    thresholded_histogram = np.where(normalized_histogram > threshold_value)
+    plt.plot(thresholded_histogram)
+    plt.show()
 
     # Descartar 20% das extremidades do histograma
     discard_percentage = 20
@@ -119,16 +124,25 @@ def process_plate_image(image):
 
 
 
-image = cv2.imread(r'Fotos\placa.webp')
-image = projecao_vertical(image)
-cv2.imshow('image', image)
-cv2.waitKey(0)
+image = cv2.imread('Fotos/placa.png')
 
-# image = cv2.imread(r'Fotos\APENASAPLACA.jpeg')
-# image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-# image = process_plate_image(image)
-# cv2.imshow('image', image)
-# cv2.waitKey(0)
+car_detections = car_model(image)[0]
+for det in car_detections.boxes.data.tolist():
+        x1, y1, x2, y2, score, class_id = det
+        if class_id == 2:
+            cv2.rectangle(image, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
+            car = image[int(y1):int(y2), int(x1):int(x2)]
+            cv2.imshow('image', car)
+            cv2.waitKey(0)
+            car = projecao_vertical(car)
+            cv2.imshow('image', car)
+            cv2.waitKey(0)
+
+            image = process_plate_image(image)
+            cv2.imshow('image2', image)
+            cv2.waitKey(0)
+
+
 
 
 
