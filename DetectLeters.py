@@ -4,7 +4,7 @@ from imutils.object_detection import non_max_suppression
 import cv2 
 from ultralytics import YOLO
 import easyocr
-image = cv2.imread('Fotos/placa.webp')
+image = cv2.imread('Fotos/car3.jpeg')
 car_model = YOLO(r"license_plate_detector.pt")
 min_confidence = 0.8
 reader = easyocr.Reader(['en'])

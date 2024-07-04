@@ -88,6 +88,7 @@ layerNames = [
 
 kernel = np.ones((3,3), np.uint8)
 video = cv2.VideoCapture('Video/VideoYoutube.mp4')
+
 while True:
     ret, frame = video.read()
     if not ret:
@@ -108,6 +109,10 @@ while True:
 
 
         image_norm, H,W, rW,rH = normalizeImg(binary_image)
+        #image_norm = cv2.dilate(image_norm, kernel, iterations = 3)
+        #image_norm = cv2.erode(image_norm, kernel, iterations = 3)
+    
+
         blob = cv2.dnn.blobFromImage(image_norm, 1.0, (W, H),
         (123.68, 116.78, 103.94), swapRB=True, crop=False)
         
@@ -125,38 +130,47 @@ while True:
 
         # make sure the largetest bounding box is fully expended horizontally
         boxes = sorted(boxes, key=lambda box: (box[2]-box[0])*(box[3]-box[1]))
-        startX, startY, endX, endY = boxes[-1]
-        startX = 0 if startX > W/4 else startX
-        endX = W if endX < 3*W/4 else endX
-        boxes[-1] = (startX, startY, W, endY)
-            
-        orig = binary_image.copy()
-        # loop over the bounding boxes
-        for (startX, startY, endX, endY) in boxes:
-            # scale the bounding box coordinates based on the respective
-            # ratios
-            startX = int(startX * rW)
-            startY = int(startY * rH)
-            endX = int(endX * rW)
-            endY = int(endY * rH)
-            # draw the bounding box on the image
-            cntImage = cv2.rectangle(orig, (startX, startY), (endX, endY), (0, 255, 0), 2)
-      
-
-        #plate_text = pytesseract.image_to_string(binary_image, config='--psm 6')
-        #filtrado = ''.join(filter(lambda x: x.isalnum(), plate_text))
-
-        for (startX, startY, endX, endY) in boxes:
+        if len(boxes) > 0:
+            startX, startY, endX, endY = boxes[-1]
+            startX = 0 if startX > W/4 else startX
+            endX = W if endX < 3*W/4 else endX
+            boxes[-1] = (startX, startY, W, endY)
+                
+            orig = binary_image.copy()
+            # loop over the bounding boxes
+            for (startX, startY, endX, endY) in boxes:
                 # scale the bounding box coordinates based on the respective
                 # ratios
-            startX = int(startX * rW)
-            startY = int(startY * rH)
-            endX = int(endX * rW)
-            endY = int(endY * rH)
+                startX = int(startX * rW)
+                startY = int(startY * rH)
+                endX = int(endX * rW)
+                endY = int(endY * rH)
+                # draw the bounding box on the image
+                cntImage = cv2.rectangle(orig, (startX, startY), (endX, endY), (0, 255, 0), 2)
+                
+        
 
-        new_image = orig[startY-3:endY+3, startX:endX]
-        plate_text = easypcr.readtext(new_image)
-        plate = plate_text[0][1] if len(plate_text) > 0 else ""
+            #plate_text = pytesseract.image_to_string(binary_image, config='--psm 6')
+            #filtrado = ''.join(filter(lambda x: x.isalnum(), plate_text))
+
+            for (startX, startY, endX, endY) in boxes:
+                    # scale the bounding box coordinates based on the respective
+                    # ratios
+                startX = int(startX * rW)
+                startY = int(startY * rH)
+                endX = int(endX * rW)
+                endY = int(endY * rH)
+
+            new_image = orig[startY-3:endY+3, startX:endX]
+
+            new_image = cv2.cvtColor(new_image, cv2.COLOR_BGR2GRAY)
+            new_image = cv2.GaussianBlur(new_image, (5, 5), 0)
+            _, new_image = cv2.threshold(new_image, 0 ,255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+            new_image = cv2.dilate(new_image, kernel, iterations = 3)
+            #new_image = cv2.erode(new_image, kernel, iterations = 3)
+
+            plate_text = easypcr.readtext(new_image)
+            plate = plate_text[0][1] if len(plate_text) > 0 else ""
         
         
         #plate_texts.append(str(filtrado))
@@ -165,8 +179,8 @@ while True:
         #     most_common_plate_text = max(set(plate_texts), key=plate_texts.count)
         #     print(most_common_plate_text)
         #     cv2.putText(frame, most_common_plate_text, (int(x1), int(y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-        if plate_text != "":
-            cv2.putText(frame, plate, (int(x1), int(y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        if len(str(plate)) < 9:
+            cv2.putText(frame, str(plate), (int(x1), int(y1 - 10)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
     cv2.imshow('frame', frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
